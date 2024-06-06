@@ -2,21 +2,21 @@
 
 public class CameraControl : MonoBehaviour
 {
-    public float m_DampTime = 0.2f;                 
-    public float m_ScreenEdgeBuffer = 4f;           
-    public float m_MinSize = 6.5f;                  
-    [HideInInspector] public Transform[] m_Targets; 
+    private float _dampTime = 0.2f;                 
+    private float _screenEdgeBuffer = 4f;           
+    public float _minSize = 6.5f;                  
+    public Transform[] _targets; 
 
 
-    private Camera m_Camera;                        
-    private float m_ZoomSpeed;                      
-    private Vector3 m_MoveVelocity;                 
-    private Vector3 m_DesiredPosition;              
+    private Camera _camera;                        
+    private float _zoomSpeed;                      
+    private Vector3 _moveVelocity;                 
+    private Vector3 _desiredPosition;              
 
 
     private void Awake()
     {
-        m_Camera = GetComponentInChildren<Camera>();
+        _camera = GetComponentInChildren<Camera>();
     }
 
 
@@ -31,65 +31,52 @@ public class CameraControl : MonoBehaviour
     {
         FindAveragePosition();
 
-        transform.position = Vector3.SmoothDamp(transform.position, m_DesiredPosition, ref m_MoveVelocity, m_DampTime);
+        transform.position = Vector3.SmoothDamp(transform.position, _desiredPosition, ref _moveVelocity, _dampTime);
     }
 
 
     private void FindAveragePosition()
     {
-        Vector3 averagePos = new Vector3();
-        int numTargets = 0;
+        Vector3 averagePos = Vector3.zero;
+        int numsActiveTarget = 0;
 
-        for (int i = 0; i < m_Targets.Length; i++)
+        for(int i = 0; i < _targets.Length; i++)
         {
-            if (!m_Targets[i].gameObject.activeSelf)
-                continue;
-
-            averagePos += m_Targets[i].position;
-            numTargets++;
+            if (!_targets[i].gameObject.activeSelf) continue;
+            averagePos += _targets[i].position;
+            numsActiveTarget++;
         }
 
-        if (numTargets > 0)
-            averagePos /= numTargets;
+        averagePos /= numsActiveTarget;
 
         averagePos.y = transform.position.y;
-
-        m_DesiredPosition = averagePos;
+        _desiredPosition = averagePos;
     }
 
 
     private void Zoom()
     {
         float requiredSize = FindRequiredSize();
-        m_Camera.orthographicSize = Mathf.SmoothDamp(m_Camera.orthographicSize, requiredSize, ref m_ZoomSpeed, m_DampTime);
+        _camera.orthographicSize = Mathf.SmoothDamp(_camera.orthographicSize, requiredSize, ref _zoomSpeed, _dampTime);
     }
 
 
     private float FindRequiredSize()
     {
-        Vector3 desiredLocalPos = transform.InverseTransformPoint(m_DesiredPosition);
+        Vector3 desiredLocalPos = transform.InverseTransformPoint(_desiredPosition);
+        float size = _minSize;
 
-        float size = 0f;
-
-        for (int i = 0; i < m_Targets.Length; i++)
+        for(int i = 0; i < _targets.Length; i++)
         {
-            if (!m_Targets[i].gameObject.activeSelf)
-                continue;
+            if (!_targets[i].gameObject.activeSelf) continue;
 
-            Vector3 targetLocalPos = transform.InverseTransformPoint(m_Targets[i].position);
-
+            Vector3 targetLocalPos = transform.InverseTransformPoint(_targets[i].position);
             Vector3 desiredPosToTarget = targetLocalPos - desiredLocalPos;
 
-            size = Mathf.Max (size, Mathf.Abs (desiredPosToTarget.y));
-
-            size = Mathf.Max (size, Mathf.Abs (desiredPosToTarget.x) / m_Camera.aspect);
+            size = Mathf.Max(size, Mathf.Abs(desiredPosToTarget.y), Mathf.Abs(desiredPosToTarget.x) / _camera.aspect);
         }
-        
-        size += m_ScreenEdgeBuffer;
 
-        size = Mathf.Max(size, m_MinSize);
-
-        return size;
+        return size + _screenEdgeBuffer;
     }
 
 
@@ -97,8 +84,8 @@ public class CameraControl : MonoBehaviour
     {
         FindAveragePosition();
 
-        transform.position = m_DesiredPosition;
+        transform.position = _desiredPosition;
 
-        m_Camera.orthographicSize = FindRequiredSize();
+        _camera.orthographicSize = FindRequiredSize();
     }
 }
