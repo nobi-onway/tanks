@@ -2,30 +2,69 @@
 
 public class ShellExplosion : MonoBehaviour
 {
-    public LayerMask m_TankMask;
-    public ParticleSystem m_ExplosionParticles;       
-    public AudioSource m_ExplosionAudio;              
-    public float m_MaxDamage = 100f;                  
-    public float m_ExplosionForce = 1000f;            
-    public float m_MaxLifeTime = 2f;                  
-    public float m_ExplosionRadius = 5f;              
+    [SerializeField]
+    private LayerMask _tankMask;
+    private ParticleSystem _explosionParticles;       
+    private AudioSource _explosionAudio;        
+    
+    private float _maxDamage = 100f;                  
+    private float _explosionForce = 1000f;            
+    private float _maxLifeTime = 2f;                  
+    private float _explosionRadius = 5f;              
 
 
     private void Start()
     {
-        Destroy(gameObject, m_MaxLifeTime);
+        _explosionParticles = GetComponentInChildren<ParticleSystem>();
+        _explosionAudio = _explosionParticles.GetComponent<AudioSource>();
+        Destroy(gameObject, _maxLifeTime);
     }
 
 
     private void OnTriggerEnter(Collider other)
     {
-        // Find all the tanks in an area around the shell and damage them.
+        Collider[] colliders = Physics.OverlapSphere(transform.position, _explosionRadius, _tankMask);
+
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            ExplosionOn(colliders[i]);
+            TakeDamageOn(colliders[i]);
+        }
+    }
+
+    private void ExplosionOn(Collider collider)
+    {
+        Rigidbody targetRb = collider.GetComponent<Rigidbody>();
+
+        if (!targetRb) return;
+
+        targetRb.AddExplosionForce(_explosionForce, transform.position, _explosionRadius);
+
+        _explosionParticles.transform.parent = null;
+        Destroy(gameObject);
+
+        _explosionParticles.Play();
+        _explosionAudio.Play();
+        Destroy(_explosionParticles, _explosionParticles.main.duration);
+    }
+
+    private void TakeDamageOn(Collider collider)
+    {
+        TankHealth tankHealth = collider.GetComponent<TankHealth>();
+
+        if (!tankHealth) return;
+
+        float damage = CalculateDamage(collider.transform.position);
+        tankHealth.TakeDamage(damage);
     }
 
 
     private float CalculateDamage(Vector3 targetPosition)
     {
-        // Calculate the amount of damage a target should take based on it's position.
-        return 0f;
+        float explosionToTargetDistance = (targetPosition - transform.position).magnitude;
+
+        float relativeDistance = (_explosionRadius - explosionToTargetDistance) / _explosionRadius;
+
+        return Mathf.Max(0, relativeDistance * _maxDamage);
     }
 }

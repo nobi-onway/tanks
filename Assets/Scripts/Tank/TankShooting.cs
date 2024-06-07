@@ -3,47 +3,96 @@ using UnityEngine.UI;
 
 public class TankShooting : MonoBehaviour
 {
-    public int m_PlayerNumber = 1;       
-    public Rigidbody m_Shell;            
-    public Transform m_FireTransform;    
-    public Slider m_AimSlider;           
-    public AudioSource m_ShootingAudio;  
-    public AudioClip m_ChargingClip;     
-    public AudioClip m_FireClip;         
-    public float m_MinLaunchForce = 15f; 
-    public float m_MaxLaunchForce = 30f; 
-    public float m_MaxChargeTime = 0.75f;
+    public int _playerNumber = 1;
+    [SerializeField]
+    private Rigidbody _shell;
+    [SerializeField]
+    private Transform _fireTransform;
+    [SerializeField]
+    private Slider _aimSlider;
+    [SerializeField]
+    private AudioSource _shootingAudio;
+    [SerializeField]
+    private AudioClip _chargingClip;
+    [SerializeField]
+    private AudioClip _fireClip;     
+    
+    private float _minLaunchForce = 15f; 
+    private float _maxLaunchForce = 30f; 
+    private float _maxChargeTime = 0.75f;
 
-    /*
-    private string m_FireButton;         
-    private float m_CurrentLaunchForce;  
-    private float m_ChargeSpeed;         
-    private bool m_Fired;                
+    
+    private string _fireButton;         
+    private float _currentLaunchForce;  
+    private float CurrentLaunchForce
+    {
+        get => _currentLaunchForce;
+        set
+        {
+            _currentLaunchForce = value > _maxLaunchForce ? _maxLaunchForce : value;
+            _aimSlider.value = value;
+        }
+    }
+    private float _chargeSpeed;         
+    private bool _fired;                
 
 
     private void OnEnable()
     {
-        m_CurrentLaunchForce = m_MinLaunchForce;
-        m_AimSlider.value = m_MinLaunchForce;
+        CurrentLaunchForce = _minLaunchForce;
+        _aimSlider.value = _minLaunchForce;
     }
 
 
     private void Start()
     {
-        m_FireButton = "Fire" + m_PlayerNumber;
+        _fireButton = "Fire" + _playerNumber;
 
-        m_ChargeSpeed = (m_MaxLaunchForce - m_MinLaunchForce) / m_MaxChargeTime;
+        _chargeSpeed = (_maxLaunchForce - _minLaunchForce) / _maxChargeTime;
     }
-    */
+    
 
     private void Update()
     {
-        // Track the current state of the fire button and make decisions based on the current launch force.
+        ListenInput();
+        if (_currentLaunchForce >= _maxLaunchForce && !_fired) Fire();
+    }
+
+    private void ListenInput()
+    {
+        if(Input.GetButtonDown(_fireButton))
+        {
+            _fired = false;
+            CurrentLaunchForce = _minLaunchForce;
+
+            EngineAudio(_chargingClip);
+        }else if (Input.GetButton(_fireButton) && !_fired)
+        {
+            CurrentLaunchForce += _chargeSpeed * Time.deltaTime;
+
+        }else if (Input.GetButtonUp(_fireButton) && !_fired)
+        {
+            Fire();
+        }
     }
 
 
     private void Fire()
     {
-        // Instantiate and launch the shell.
+        _fired = true;
+
+        Rigidbody shellRb = Instantiate(_shell, _fireTransform.position, _fireTransform.rotation);
+
+        shellRb.velocity = _currentLaunchForce * _fireTransform.forward;
+
+        EngineAudio(_fireClip);
+
+        CurrentLaunchForce = _minLaunchForce;
+    }
+
+    private void EngineAudio(AudioClip audioClip)
+    {
+        _shootingAudio.clip = audioClip;
+        _shootingAudio.Play();
     }
 }
