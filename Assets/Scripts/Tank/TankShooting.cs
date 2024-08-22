@@ -1,5 +1,10 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections;
+using UnityEngine;
 using UnityEngine.UI;
+
+
+public enum EShootState { FIRE, START, CHARGE }
 
 public class TankShooting : MonoBehaviour
 {
@@ -20,6 +25,21 @@ public class TankShooting : MonoBehaviour
     private float _minLaunchForce = 15f; 
     private float _maxLaunchForce = 30f; 
     private float _maxChargeTime = 0.75f;
+
+    private float _launchTime;
+
+    private EShootState _state;
+    public EShootState State
+    {
+        get => _state;
+        set
+        {
+            _state = value;
+            OnShootStateChange?.Invoke(value);
+        }
+    }
+
+    public event Action<EShootState> OnShootStateChange;
 
     
     private string _fireButton;         
@@ -49,13 +69,34 @@ public class TankShooting : MonoBehaviour
         _fireButton = "Fire" + _playerNumber;
 
         _chargeSpeed = (_maxLaunchForce - _minLaunchForce) / _maxChargeTime;
+
+        OnShootStateChange += (state) =>
+        {
+            switch(state)
+            {
+                case EShootState.FIRE:
+                    Fire();
+                    break;
+                case EShootState.START:
+                    _fired = false;
+                    CurrentLaunchForce = _minLaunchForce;
+
+                    EngineAudio(_chargingClip);
+                    break;
+                case EShootState.CHARGE:
+                    CurrentLaunchForce += _chargeSpeed * Time.deltaTime;
+                    break;
+            }
+        };
     }
     
 
     private void Update()
     {
+        _launchTime += Time.deltaTime;
+
         ListenInput();
-        if (_currentLaunchForce >= _maxLaunchForce && !_fired) Fire();
+        if (_currentLaunchForce >= _maxLaunchForce && !_fired) State = EShootState.FIRE;
     }
 
     private void ListenInput()
@@ -76,10 +117,37 @@ public class TankShooting : MonoBehaviour
         }
     }
 
+    public void AIFire(Vector3 target)
+    {
+        if (_launchTime < 0.5f) return;
+
+        if(_fired)
+        {
+            _fired = false;
+            CurrentLaunchForce = _minLaunchForce;
+
+            EngineAudio(_chargingClip);
+        }
+
+        CurrentLaunchForce += _chargeSpeed * Time.deltaTime;
+
+        float angle = MathF.Abs(360 - _fireTransform.eulerAngles.x);
+        float distance = Vector3.Distance(_fireTransform.position, target);
+
+        float velocitySquare = (distance) * Physics.gravity.magnitude / Mathf.Sin(2 * angle * Mathf.PI / 180);
+        
+        if (CurrentLaunchForce - Mathf.Sqrt(velocitySquare) >= 0) Fire();
+    }
+
+    public void ResetLauch()
+    {
+        CurrentLaunchForce = _minLaunchForce;
+    }
 
     private void Fire()
     {
         _fired = true;
+        _launchTime = 0.0f;
 
         Rigidbody shellRb = Instantiate(_shell, _fireTransform.position, _fireTransform.rotation);
 

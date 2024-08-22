@@ -39,8 +39,8 @@ public class TankMovement : MonoBehaviour
             OnStateChange?.Invoke(value);
         }
     }
-    private event Action<TankState> OnStateChange; 
-
+    private event Action<TankState> OnStateChange;
+    public float GetSpeed() => _speed;
 
     private void Awake()
     {

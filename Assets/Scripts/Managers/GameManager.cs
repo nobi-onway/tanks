@@ -2,7 +2,6 @@
 using System.Collections;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
-using TMPro;
 
 public class GameManager : MonoBehaviour
 {
@@ -16,12 +15,16 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private GameObject _tankPrefab;
     [SerializeField]
+    private GameObject _aiTankPrefab;
+    [SerializeField]
     private TankManager[] _tanksManager;           
 
 
     private int _roundNumber;              
     private TankManager _roundWinner;
-    private TankManager _gameWinner;       
+    private TankManager _gameWinner;
+
+    [SerializeField] private Transform[] _waypoints;
 
 
     private void Start()
@@ -35,13 +38,17 @@ public class GameManager : MonoBehaviour
 
     private void SpawnAllTanks()
     {
-        for (int i = 0; i < _tanksManager.Length; i++)
-        {
-            _tanksManager[i].m_Instance =
-                Instantiate(_tankPrefab, _tanksManager[i].m_SpawnPoint.position, _tanksManager[i].m_SpawnPoint.rotation) as GameObject;
-            _tanksManager[i].m_PlayerNumber = i + 1;
-            _tanksManager[i].Setup();
-        }
+        _tanksManager[0].m_Instance =
+                Instantiate(_tankPrefab, _tanksManager[0].m_SpawnPoint.position, _tanksManager[0].m_SpawnPoint.rotation) as GameObject;
+        _tanksManager[0].m_PlayerNumber = 1;
+        _tanksManager[0].Setup();
+
+        _tanksManager[1].m_Instance =
+                Instantiate(_aiTankPrefab, _tanksManager[0].m_SpawnPoint.position, _tanksManager[0].m_SpawnPoint.rotation) as GameObject;
+        _tanksManager[1].m_Instance.GetComponent<TankBT>().SetTarget(_tanksManager[0].m_Instance.transform);
+        _tanksManager[1].m_Instance.GetComponent<TankBT>().SetWayPoints(_waypoints);
+        _tanksManager[1].m_PlayerNumber = 2;
+        _tanksManager[1].Setup();
     }
 
 
